@@ -14,9 +14,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
+
 @Service
 @Slf4j
 public class OpenAiService {
+
+    private static final String SYSTEM_PROMPT = """
+        You are a helpful backend development mentor.
+        Answer clearly and practically.
+        Keep answers concise unless the user asks for details.
+        Focus on Java, Spring Boot, REST APIs, backend architecture, and AI integration.
+
+        Important:
+        Only use the conversation history provided below.
+        If there is no conversation history, say that there is no previous context for this session.
+        Do not invent prior conversation.
+        """;
+
+    private final ChatMemoryService chatMemoryService;
 
     private final RestClient restClient;
     private final String openAiBaseUrl;
@@ -26,20 +42,24 @@ public class OpenAiService {
     public OpenAiService(RestClient.Builder builder,
                          @Value("${openai.api.base-url}") String openAiBaseUrl,
                          @Value("${openai.api.key}") String openAiApiKey,
-                         @Value("${openai.model}") String model) {
+                         @Value("${openai.model}") String model,
+                         ChatMemoryService chatMemoryService) {
         this.restClient = builder.build();
         this.openAiBaseUrl = openAiBaseUrl;
         this.openAiApiKey = openAiApiKey;
         this.model = model;
+        this.chatMemoryService = chatMemoryService;
     }
 
     public ChatResponse chat(ChatRequest request) {
         try {
             log.info("Calling OpenAI Responses API with model={}", model);
 
+            String prompt = buildPrompt(request);
+
             OpenAiRequest openAiRequest = new OpenAiRequest(
                     model,
-                    request.getMessage()
+                    prompt
             );
 
             ResponseEntity<OpenAiResponse> responseEntity = restClient.post()
@@ -64,7 +84,15 @@ public class OpenAiService {
                 throw new ExternalApiException("OpenAI returned empty response");
             }
 
-            return mapToChatResponse(body);
+            ChatResponse chatResponse = mapToChatResponse(body);
+
+            chatMemoryService.updateMemory(
+                    request.getSessionId(),
+                    request.getMessage(),
+                    chatResponse.getReply()
+            );
+
+            return chatResponse;
 
         } catch (ExternalApiException e) {
             throw e;
@@ -92,5 +120,28 @@ public class OpenAiService {
         }
 
         return new ChatResponse(text);
+    }
+
+    private String buildPrompt(ChatRequest request) {
+        List<String> history = chatMemoryService.getHistory(request.getSessionId());
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append(SYSTEM_PROMPT).append("\n\n");
+
+        if (!history.isEmpty()) {
+            prompt.append("Conversation history for this session:\n");
+            for (String item : history) {
+                prompt.append(item).append("\n");
+            }
+            prompt.append("\n");
+        } else {
+            prompt.append("Conversation history for this session: NONE\n\n");
+        }
+
+        prompt.append("Current user message:\n");
+        prompt.append(request.getMessage()).append("\n");
+        prompt.append("Assistant:");
+
+        return prompt.toString();
     }
 }

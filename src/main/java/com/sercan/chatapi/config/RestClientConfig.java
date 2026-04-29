@@ -12,7 +12,7 @@ public class RestClientConfig {
     public RestClient.Builder restClientBuilder() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(3000);
-        requestFactory.setReadTimeout(5000);
+        requestFactory.setReadTimeout(10000);
 
         return RestClient.builder()
                 .requestFactory(requestFactory);

@@ -1,5 +1,6 @@
 package com.sercan.chatapi.service;
 
+import com.sercan.chatapi.config.OpenAiProperties;
 import com.sercan.chatapi.dto.ai.ChatRequest;
 import com.sercan.chatapi.dto.ai.ChatResponse;
 import com.sercan.chatapi.dto.ai.openai.OpenAiRequest;
@@ -20,54 +21,38 @@ import java.util.List;
 @Slf4j
 public class OpenAiService {
 
-    private static final String SYSTEM_PROMPT = """
-        You are a helpful backend development mentor.
-        Answer clearly and practically.
-        Keep answers concise unless the user asks for details.
-        Focus on Java, Spring Boot, REST APIs, backend architecture, and AI integration.
-
-        Important:
-        Only use the conversation history provided below.
-        If there is no conversation history, say that there is no previous context for this session.
-        Do not invent prior conversation.
-        """;
-
     private final PromptBuilderService promptBuilderService;
     private final ChatMemoryService chatMemoryService;
 
+    private final OpenAiProperties openAiProperties;
+
     private final RestClient restClient;
-    private final String openAiBaseUrl;
-    private final String openAiApiKey;
-    private final String model;
 
     public OpenAiService(RestClient.Builder builder,
-                         @Value("${openai.api.base-url}") String openAiBaseUrl,
-                         @Value("${openai.api.key}") String openAiApiKey,
-                         @Value("${openai.model}") String model,
+                         OpenAiProperties openAiProperties,
                          PromptBuilderService promptBuilderService,
                          ChatMemoryService chatMemoryService) {
+
         this.restClient = builder.build();
-        this.openAiBaseUrl = openAiBaseUrl;
-        this.openAiApiKey = openAiApiKey;
-        this.model = model;
+        this.openAiProperties = openAiProperties;
         this.promptBuilderService = promptBuilderService;
         this.chatMemoryService = chatMemoryService;
     }
 
     public ChatResponse chat(ChatRequest request) {
         try {
-            log.info("Calling OpenAI Responses API with model={}", model);
+            log.info("Calling OpenAI Responses API with model={}", openAiProperties.getModel());
 
             String prompt = promptBuilderService.buildPrompt(request);
 
             OpenAiRequest openAiRequest = new OpenAiRequest(
-                    model,
+                    openAiProperties.getModel(),
                     prompt
             );
 
             ResponseEntity<OpenAiResponse> responseEntity = restClient.post()
-                    .uri(openAiBaseUrl)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + openAiApiKey)
+                    .uri(openAiProperties.getApi().getBaseUrl())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + openAiProperties.getApi().getBaseUrl())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(openAiRequest)
                     .retrieve()

@@ -1,5 +1,8 @@
 package com.sercan.chatapi.service;
 
+import com.sercan.chatapi.model.ChatMessage;
+import com.sercan.chatapi.model.ChatRole;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -10,22 +13,25 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ChatMemoryService {
 
-    private static final int MAX_HISTORY_SIZE = 10;
+    private final int maxHistorySize;
+    private final Map<String, List<ChatMessage>> memory = new ConcurrentHashMap<>();
 
-    private final Map<String, List<String>> memory = new ConcurrentHashMap<>();
+    public ChatMemoryService(@Value("${chat.memory.max-history-size}") int maxHistorySize) {
+        this.maxHistorySize = maxHistorySize;
+    }
 
-    public List<String> getHistory(String sessionId) {
-        return memory.getOrDefault(sessionId, new ArrayList<>());
+    public List<ChatMessage> getHistory(String sessionId) {
+        return new ArrayList<>(memory.getOrDefault(sessionId, new ArrayList<>()));
     }
 
     public void updateMemory(String sessionId, String userMessage, String assistantReply) {
-        List<String> history = new ArrayList<>(memory.getOrDefault(sessionId, new ArrayList<>()));
+        List<ChatMessage> history = getHistory(sessionId);
 
-        history.add("User: " + userMessage);
-        history.add("Assistant: " + assistantReply);
+        history.add(new ChatMessage(ChatRole.USER, userMessage));
+        history.add(new ChatMessage(ChatRole.ASSISTANT, assistantReply));
 
-        if (history.size() > MAX_HISTORY_SIZE) {
-            history = history.subList(history.size() - MAX_HISTORY_SIZE, history.size());
+        if (history.size() > maxHistorySize) {
+            history = history.subList(history.size() - maxHistorySize, history.size());
         }
 
         memory.put(sessionId, history);

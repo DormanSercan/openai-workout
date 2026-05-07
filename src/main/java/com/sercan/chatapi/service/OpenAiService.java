@@ -32,6 +32,7 @@ public class OpenAiService {
         Do not invent prior conversation.
         """;
 
+    private final PromptBuilderService promptBuilderService;
     private final ChatMemoryService chatMemoryService;
 
     private final RestClient restClient;
@@ -43,11 +44,13 @@ public class OpenAiService {
                          @Value("${openai.api.base-url}") String openAiBaseUrl,
                          @Value("${openai.api.key}") String openAiApiKey,
                          @Value("${openai.model}") String model,
+                         PromptBuilderService promptBuilderService,
                          ChatMemoryService chatMemoryService) {
         this.restClient = builder.build();
         this.openAiBaseUrl = openAiBaseUrl;
         this.openAiApiKey = openAiApiKey;
         this.model = model;
+        this.promptBuilderService = promptBuilderService;
         this.chatMemoryService = chatMemoryService;
     }
 
@@ -55,7 +58,7 @@ public class OpenAiService {
         try {
             log.info("Calling OpenAI Responses API with model={}", model);
 
-            String prompt = buildPrompt(request);
+            String prompt = promptBuilderService.buildPrompt(request);
 
             OpenAiRequest openAiRequest = new OpenAiRequest(
                     model,
@@ -120,28 +123,5 @@ public class OpenAiService {
         }
 
         return new ChatResponse(text);
-    }
-
-    private String buildPrompt(ChatRequest request) {
-        List<String> history = chatMemoryService.getHistory(request.getSessionId());
-
-        StringBuilder prompt = new StringBuilder();
-        prompt.append(SYSTEM_PROMPT).append("\n\n");
-
-        if (!history.isEmpty()) {
-            prompt.append("Conversation history for this session:\n");
-            for (String item : history) {
-                prompt.append(item).append("\n");
-            }
-            prompt.append("\n");
-        } else {
-            prompt.append("Conversation history for this session: NONE\n\n");
-        }
-
-        prompt.append("Current user message:\n");
-        prompt.append(request.getMessage()).append("\n");
-        prompt.append("Assistant:");
-
-        return prompt.toString();
     }
 }

@@ -24,22 +24,23 @@ public class OpenAiService {
 
     private final PromptBuilderService promptBuilderService;
     private final ChatMemoryService chatMemoryService;
-
     private final OpenAiProperties openAiProperties;
-
     private final RestClient restClient;
+    private final RetryService retryService;
 
     public OpenAiService(
             @Qualifier("openAiRestClientBuilder")
             RestClient.Builder builder,
             OpenAiProperties openAiProperties,
             PromptBuilderService promptBuilderService,
-            ChatMemoryService chatMemoryService) {
+            ChatMemoryService chatMemoryService,
+            RetryService retryService) {
 
         this.restClient = builder.build();
         this.openAiProperties = openAiProperties;
         this.promptBuilderService = promptBuilderService;
         this.chatMemoryService = chatMemoryService;
+        this.retryService = retryService;
     }
 
     public ChatResponse chat(ChatRequest request) {
@@ -53,13 +54,16 @@ public class OpenAiService {
                     prompt
             );
 
-            ResponseEntity<OpenAiResponse> responseEntity = restClient.post()
-                    .uri(openAiProperties.getApi().getBaseUrl())
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + openAiProperties.getApi().getKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(openAiRequest)
-                    .retrieve()
-                    .toEntity(OpenAiResponse.class);
+            ResponseEntity<OpenAiResponse> responseEntity = retryService.executeWithRetry(
+                    "OpenAI API call",
+                    () -> restClient.post()
+                            .uri(openAiProperties.getApi().getBaseUrl())
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + openAiProperties.getApi().getKey())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(openAiRequest)
+                            .retrieve()
+                            .toEntity(OpenAiResponse.class)
+            );
 
             HttpStatusCode statusCode = responseEntity.getStatusCode();
 

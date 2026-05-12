@@ -4,6 +4,7 @@ import com.sercan.chatapi.dto.QuoteResponse;
 import com.sercan.chatapi.dto.external.ExternalQuoteResponse;
 import com.sercan.chatapi.exception.ExternalApiException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +18,12 @@ public class QuoteService {
     private final RestClient restClient;
     private final String quoteUrl;
 
-    public QuoteService(RestClient.Builder builder,
-                        @Value("${external.api.quote-url}") String quoteUrl) {
+    public QuoteService(
+            @Qualifier("quoteRestClientBuilder")
+            RestClient.Builder builder,
+
+            @Value("${external.api.quote-url}")
+            String quoteUrl) {
         this.restClient = builder.build();
         this.quoteUrl = quoteUrl;
     }

@@ -7,6 +7,7 @@ import com.sercan.chatapi.dto.ai.openai.OpenAiRequest;
 import com.sercan.chatapi.dto.ai.openai.OpenAiResponse;
 import com.sercan.chatapi.exception.ExternalApiException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -28,10 +29,12 @@ public class OpenAiService {
 
     private final RestClient restClient;
 
-    public OpenAiService(RestClient.Builder builder,
-                         OpenAiProperties openAiProperties,
-                         PromptBuilderService promptBuilderService,
-                         ChatMemoryService chatMemoryService) {
+    public OpenAiService(
+            @Qualifier("openAiRestClientBuilder")
+            RestClient.Builder builder,
+            OpenAiProperties openAiProperties,
+            PromptBuilderService promptBuilderService,
+            ChatMemoryService chatMemoryService) {
 
         this.restClient = builder.build();
         this.openAiProperties = openAiProperties;
@@ -52,7 +55,7 @@ public class OpenAiService {
 
             ResponseEntity<OpenAiResponse> responseEntity = restClient.post()
                     .uri(openAiProperties.getApi().getBaseUrl())
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + openAiProperties.getApi().getBaseUrl())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + openAiProperties.getApi().getKey())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(openAiRequest)
                     .retrieve()

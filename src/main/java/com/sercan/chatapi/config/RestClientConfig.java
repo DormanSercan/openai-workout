@@ -15,7 +15,8 @@ public class RestClientConfig {
         requestFactory.setReadTimeout(5000);
 
         return RestClient.builder()
-                .requestFactory(requestFactory);
+                .requestFactory(requestFactory)
+                .requestInterceptor(new HttpLoggingInterceptor("QUOTE"));
     }
 
     @Bean
@@ -28,6 +29,7 @@ public class RestClientConfig {
         requestFactory.setReadTimeout(10000);
 
         return RestClient.builder()
-                .requestFactory(requestFactory);
+                .requestFactory(requestFactory)
+                .requestInterceptor(new HttpLoggingInterceptor("OPENAI"));
     }
 }

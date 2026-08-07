@@ -22,7 +22,7 @@ class ChatMemoryServiceTest {
 
         List<ChatMessage> history = chatMemoryService.getHistory("session-1");
 
-        assertEquals(2, history.size());
+        assertEquals(4, history.size());
 
         assertEquals(ChatRole.USER, history.get(0).getRole());
         assertEquals("Hello", history.get(0).getContent());

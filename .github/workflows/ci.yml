@@ -33,7 +33,7 @@ jobs:
         run: chmod +x mvnw
 
       - name: Verify Maven version
-  	run: ./mvnw --version
+        run: ./mvnw --version
 
       - name: Run tests
         run: ./mvnw --batch-mode clean test
